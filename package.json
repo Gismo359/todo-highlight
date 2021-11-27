@@ -1,0 +1,173 @@
+{
+	"name": "todo",
+	"displayName": "TODO",
+	"description": "Hightlight TODOs in comments",
+	"version": "0.0.1",
+	"engines": {
+		"vscode": "^1.59.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"main": "./out/extension.js",
+	"contributes": {
+		"configuration": {
+			"type": "object",
+			"title": "TODO",
+			"properties": {
+				"todo.annotations": {
+					"type": "array",
+					"description": "All annotation that should be matched within comments",
+					"default": [
+						{
+							"name": "todo",
+							"pattern": "TODO(@[_a-zA-Z0-9]+)?:.*",
+							"color": "#ffcc00"
+						},
+						{
+							"name": "note",
+							"pattern": "NOTE(@[_a-zA-Z0-9]+)?:.*",
+							"color": "#00bbbb"
+						},
+						{
+							"name": "bug",
+							"pattern": "BUG(@[_a-zA-Z0-9]+)?:.*",
+							"color": "#ff8800"
+						}
+					],
+					"items": {
+						"type": "object",
+						"properties": {
+							"name": {
+								"type": "string",
+								"description": "Name of this annotation type"
+							},
+							"color": {
+								"type": "string",
+								"description": "Foreground color of this annotation"
+							},
+							"pattern": {
+								"type": "string",
+								"description": "Regular expression that matches this annotation"
+							}
+						}
+					}
+				},
+				"todo.languages": {
+					"type": "array",
+					"description": "Descriptions of languages and their comment types",
+					"default": [
+						{
+							"filePattern": "\\.[ch](?:pp)?",
+							"lineComments": [
+								"(?<=\\\/\\\/).*"
+							],
+							"blockComments": [
+								"(?<=\\\/\\*)[\\s\\S]*?(?=\\\\\\/)"
+							],
+							"skippedBlocks": [
+								"\"(?:[^\"\\\\]|\\\\.)*\"",
+								"'(?:[^'\\\\]|\\\\.)*'"
+							]
+						},
+						{
+							"filePattern": "\\.[jt]s",
+							"lineComments": [
+								"(?<=\\\/\\\/).*"
+							],
+							"blockComments": [
+								"(?<=\\\/\\*)[\\s\\S]*?(?=\\*\\\/)"
+							],
+							"skippedBlocks": [
+								"\"(?:[^\"\\\\]|\\\\.)*\"",
+								"'(?:[^'\\\\]|\\\\.)*'"
+							]
+						},
+						{
+							"filePattern": "\\.(?:py[xi]?|pxd)",
+							"lineComments": [
+								"(?<=#).*"
+							],
+							"blockComments": [
+								"(?<=\"\"\")(?:[^\"\\\\]|\\\\.)*(?=\"\"\")",
+								"(?<=''')(?:[^'\\\\]|\\\\.)*(?=''')"
+							],
+							"skippedBlocks": [
+								"\"(?:[^\"\\\\]|\\\\.)*\"",
+								"'(?:[^'\\\\]|\\\\.)*'"
+							]
+						},
+						{
+							"filePattern": "\\.cmake|CMakeLists.txt",
+							"lineComments": [
+								"(?<=#).*"
+							],
+							"blockComments": [],
+							"skippedBlocks": [
+								"\"(?:[^\"\\\\]|\\\\.)*\"",
+								"'(?:[^'\\\\]|\\\\.)*'"
+							]
+						}
+					],
+					"items": {
+						"type": "object",
+						"properties": {
+							"filePattern": {
+								"type": "string",
+								"description": "Regular expression of filenames for which this language"
+							},
+							"lineComments": {
+								"type": "array",
+								"description": "Regular expressions that match line comments",
+								"items": {
+									"type": "string",
+									"description": "A regular expression"
+								}
+							},
+							"blockComments": {
+								"type": "array",
+								"description": "Regular expressions that match block comments",
+								"items": {
+									"type": "string",
+									"description": "A regular expression"
+								}
+							},
+							"skippedBlocks": {
+								"type": "array",
+								"description": "Regualr expressions that should be skipped (e.g. string literals)",
+								"items": {
+									"type": "string",
+									"description": "A regular expression"
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./",
+		"pretest": "npm run compile && npm run lint",
+		"lint": "eslint src --ext ts",
+		"test": "node ./out/test/runTest.js"
+	},
+	"devDependencies": {
+		"@types/vscode": "^1.59.0",
+		"@types/glob": "^7.1.3",
+		"@types/mocha": "^8.2.2",
+		"@types/node": "14.x",
+		"eslint": "^7.27.0",
+		"@typescript-eslint/eslint-plugin": "^4.26.0",
+		"@typescript-eslint/parser": "^4.26.0",
+		"glob": "^7.1.7",
+		"mocha": "^8.4.0",
+		"typescript": "^4.3.2",
+		"vscode-test": "^1.5.2"
+	}
+}
