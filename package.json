@@ -12,6 +12,7 @@
 	"activationEvents": [
 		"onStartupFinished"
 	],
+	"publisher": "Daniel-Atanasov",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/Daniel-Atanasov/todo-highlight.git"
