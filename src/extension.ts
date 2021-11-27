@@ -48,16 +48,22 @@ class GlobalState {
 	}
 
 	public static getInstance(): GlobalState {
-		return this.instance;
+		return GlobalState.instance;
 	}
 
 	public static reload() {
 		const configuration = vscode.workspace.getConfiguration("todo");
 		const annotationOptions = configuration.get<Array<AnnotationOptions>>("annotations");
 		const languages = configuration.get<Array<Language>>("languages");
-	
+
 		if (annotationOptions === undefined || languages === undefined) {
 			return;
+		}
+
+		if (GlobalState.instance !== undefined) {
+			for (const annotation of Object.values(GlobalState.instance.annotations)) {
+				annotation.type.dispose();
+			}
 		}
 
 		let decorations: Dictionary<DecorationType> = {};
@@ -66,7 +72,9 @@ class GlobalState {
 			decorations[annotation.name] = new DecorationType(annotation.name, annotation.pattern, decorationType);
 		}
 
-		this.instance = new GlobalState(languages, decorations);
+		GlobalState.instance = new GlobalState(languages, decorations);
+
+		decorateActiveEditor();
 	}
 
 	public languages: Array<Language>;
@@ -97,9 +105,9 @@ function decorate(editor: TextEditor) {
 
 	const globalState = GlobalState.getInstance();
 
-	for (const [key, info] of Object.entries(globalState.languages)) {
+	for (const info of globalState.languages) {
 		const extension = path.basename(document.fileName);
-		const regex = new RegExp(key);
+		const regex = new RegExp(info.filePattern);
 		if (!regex.test(extension)) {
 			continue;
 		}
@@ -159,21 +167,20 @@ function decorate(editor: TextEditor) {
 }
 
 function decorateActiveEditor() {
-	const editor = vscode.window.activeTextEditor;
-	if (editor !== undefined && editor !== null) {
-		decorate(editor);
+	for (const editor of vscode.window.visibleTextEditors) {
+		if (editor !== undefined && editor !== null) {
+			decorate(editor);
+		}
 	}
 }
 
 export function activate(context: ExtensionContext) {
 	GlobalState.reload();
 
-	const decorateCommand = vscode.commands.registerCommand('todo-highlight.decorate', decorateActiveEditor);
 	const onTextChangedCommand = vscode.workspace.onDidChangeTextDocument(decorateActiveEditor);
 	const onTextEditorChanged = vscode.window.onDidChangeActiveTextEditor(decorateActiveEditor);
 	const onConfigurationChanged = vscode.workspace.onDidChangeConfiguration(GlobalState.reload);
 
-	context.subscriptions.push(decorateCommand);
 	context.subscriptions.push(onTextChangedCommand);
 	context.subscriptions.push(onTextEditorChanged);
 	context.subscriptions.push(onConfigurationChanged);
