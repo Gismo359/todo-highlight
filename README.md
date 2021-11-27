@@ -1,3 +1,3 @@
-# todo-highlight README
+# Visual Studio Code Todo Highlighter
 
-Highlight todo
+Highlights todo/note/bug/etc. in comments
