@@ -19,6 +19,7 @@ interface AnnotationOptions extends DecorationRenderOptions {
 }
 
 interface Language {
+	languageIds: Array<string>
 	filePattern: string;
 	lineComments: Array<string>;
 	blockComments: Array<string>;
@@ -106,9 +107,7 @@ function decorate(editor: TextEditor) {
 	const globalState = GlobalState.getInstance();
 
 	for (const info of globalState.languages) {
-		const extension = path.basename(document.fileName);
-		const regex = new RegExp(info.filePattern);
-		if (!regex.test(extension)) {
+		if (info.languageIds.includes(document.languageId)) {
 			continue;
 		}
 

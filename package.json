@@ -66,7 +66,7 @@
 					"description": "Descriptions of languages and their comment types",
 					"default": [
 						{
-							"filePattern": "\\.[ch](?:pp)?",
+							"languageIds": ["javascript", "typescript", "c", "cpp", "objective-c", "objective-cpp", "csharp", "java"],
 							"lineComments": [
 								"(?<=\\\/\\\/).*"
 							],
@@ -79,20 +79,7 @@
 							]
 						},
 						{
-							"filePattern": "\\.[jt]s",
-							"lineComments": [
-								"(?<=\\\/\\\/).*"
-							],
-							"blockComments": [
-								"(?<=\\\/\\*)[\\s\\S]*?(?=\\*\\\/)"
-							],
-							"skippedBlocks": [
-								"\"(?:[^\"\\\\]|\\\\.)*\"",
-								"'(?:[^'\\\\]|\\\\.)*'"
-							]
-						},
-						{
-							"filePattern": "\\.(?:py[xi]?|pxd)",
+							"languageIds": ["python", "cython"],
 							"lineComments": [
 								"(?<=#).*"
 							],
@@ -106,7 +93,7 @@
 							]
 						},
 						{
-							"filePattern": "\\.cmake|CMakeLists.txt",
+							"languageIds": ["cmake"],
 							"lineComments": [
 								"(?<=#).*"
 							],
@@ -120,9 +107,11 @@
 					"items": {
 						"type": "object",
 						"properties": {
-							"filePattern": {
-								"type": "string",
-								"description": "Regular expression of filenames for which this language"
+							"languageIds": {
+								"items": {
+									"type": "string",
+									"description": "Language ids which should be annotated with these types of comments"
+								}
 							},
 							"lineComments": {
 								"type": "array",
