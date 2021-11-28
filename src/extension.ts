@@ -20,7 +20,6 @@ interface AnnotationOptions extends DecorationRenderOptions {
 
 interface Language {
 	languageIds: Array<string>
-	filePattern: string;
 	lineComments: Array<string>;
 	blockComments: Array<string>;
 	skippedBlocks: Array<string>;
