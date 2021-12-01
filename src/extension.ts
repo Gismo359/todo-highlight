@@ -28,26 +28,24 @@ interface Language {
 }
 
 class DecorationType {
-	constructor(name: string, pattern: string, type: TextEditorDecorationType) {
-		this.name = name;
-		this.pattern = pattern;
-		this.type = type;
+	constructor(
+		public name: string,
+		public pattern: string,
+		public type: TextEditorDecorationType
+	) {
 		this.options = [];
 	}
 
-	name: string;
-	pattern: string;
-	type: TextEditorDecorationType;
 	options: Array<DecorationOptions> = [];
 }
 
 class GlobalState {
 	private static instance: GlobalState;
 
-	private constructor(languages: Array<Language>, decorations: Dictionary<DecorationType>) {
-		this.languages = languages;
-		this.annotations = decorations;
-	}
+	private constructor(
+		public languages: Array<Language>,
+		public annotations: Dictionary<DecorationType>
+	) { }
 
 	private static getAnnotationRegex(info: Language): RegExp {
 		const globalState = GlobalState.getInstance();
@@ -105,9 +103,6 @@ class GlobalState {
 
 		decorateVisibleEditors();
 	}
-
-	public languages: Array<Language>;
-	public annotations: Dictionary<DecorationType>;
 }
 
 function findAnnotations(document: TextDocument, info: Language, text: string, offset: number) {
