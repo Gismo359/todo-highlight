@@ -6,16 +6,18 @@ import {
 	DecorationOptions,
 	TextEditorDecorationType,
 	DecorationRenderOptions,
-	TextDocument
+	TextDocument,
+	MarkdownString
 } from 'vscode';
 
 interface Dictionary<T> {
 	[Key: string]: T;
 }
 
-interface AnnotationOptions extends DecorationRenderOptions {
+interface AnnotationRenderOptions extends DecorationRenderOptions {
 	name: string;
 	pattern: string;
+	isMarkdown?: boolean;
 }
 
 interface Language {
@@ -31,7 +33,8 @@ class DecorationType {
 	constructor(
 		public name: string,
 		public pattern: string,
-		public type: TextEditorDecorationType
+		public type: TextEditorDecorationType,
+		public isMarkdown?: boolean
 	) {
 		this.options = [];
 	}
@@ -57,7 +60,7 @@ class GlobalState {
 		const pattern = patterns.join("|");
 		return new RegExp(pattern, "g");
 	}
-	
+
 	private static getCommentRegex(info: Language): RegExp {
 		const lineComments = info.lineComments.join("|");
 		const blockComments = info.blockComments.join("|");
@@ -75,7 +78,7 @@ class GlobalState {
 
 	public static reload() {
 		const configuration = vscode.workspace.getConfiguration("todo");
-		const annotationOptions = configuration.get<Array<AnnotationOptions>>("annotations");
+		const annotationOptions = configuration.get<Array<AnnotationRenderOptions>>("annotations");
 		const languages = configuration.get<Array<Language>>("languages");
 
 		if (annotationOptions === undefined || languages === undefined) {
@@ -88,13 +91,18 @@ class GlobalState {
 			}
 		}
 
-		let decorations: Dictionary<DecorationType> = {};
-		for (const annotation of annotationOptions) {
-			const decorationType = vscode.window.createTextEditorDecorationType(annotation);
-			decorations[annotation.name] = new DecorationType(annotation.name, annotation.pattern, decorationType);
+		let annotations: Dictionary<DecorationType> = {};
+		for (const options of annotationOptions) {
+			const decorationType = vscode.window.createTextEditorDecorationType(options);
+			annotations[options.name] = new DecorationType(
+				options.name,
+				options.pattern,
+				decorationType,
+				options.isMarkdown
+			);
 		}
 
-		GlobalState.instance = new GlobalState(languages, decorations);
+		GlobalState.instance = new GlobalState(languages, annotations);
 
 		for (const language of languages) {
 			language.combinedCommentRegex = GlobalState.getCommentRegex(language);
@@ -121,7 +129,8 @@ function findAnnotations(document: TextDocument, info: Language, text: string, o
 			continue;
 		}
 
-		for (const [key, value] of Object.entries(groups)) {
+		for (const [key, annotation] of Object.entries(annotations)) {
+			const value = groups[key];
 			if (value === undefined) {
 				continue;
 			}
@@ -130,19 +139,27 @@ function findAnnotations(document: TextDocument, info: Language, text: string, o
 			//   Empty matches do not increment lastIndex for some dumb reason
 			if (value === '') {
 				regex.lastIndex++;
+				continue;
 			}
 
 			const start = offset + match.index;
 			const stop = offset + match.index + match[0].length;
 
-			const decoration = {
+			const decoration: DecorationOptions = {
 				range: new Range(
 					document.positionAt(start),
 					document.positionAt(stop)
 				)
 			};
 
-			annotations[key].options.push(decoration);
+			if (annotation.isMarkdown) {
+				decoration.hoverMessage = new MarkdownString(value);
+				decoration.hoverMessage.isTrusted = true;
+				decoration.hoverMessage.supportThemeIcons = true;
+				decoration.hoverMessage.supportHtml = true;
+			}
+
+			annotation.options.push(decoration);
 		}
 	}
 }
@@ -166,6 +183,7 @@ function findComments(document: TextDocument, info: Language) {
 		//   Empty matches do not increment lastIndex for some dumb reason
 		if (body === '') {
 			regex.lastIndex++;
+			continue;
 		}
 
 		findAnnotations(document, info, body, match.index);

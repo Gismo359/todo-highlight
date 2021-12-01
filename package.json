@@ -2,9 +2,9 @@
 	"name": "todo",
 	"displayName": "TODO",
 	"description": "Hightlight TODOs in comments",
-	"version": "0.0.3",
+	"version": "0.0.4",
 	"engines": {
-		"vscode": "^1.59.0"
+		"vscode": "^1.61.0"
 	},
 	"categories": [
 		"Other"
@@ -29,18 +29,24 @@
 					"default": [
 						{
 							"name": "todo",
-							"pattern": "TODO(@[_a-zA-Z0-9]+)?:.*",
+							"pattern": "TODO(@[_a-zA-Z0-9]+)?:[\\s\\S]*",
 							"color": "#ffcc00"
 						},
 						{
 							"name": "note",
-							"pattern": "NOTE(@[_a-zA-Z0-9]+)?:.*",
+							"pattern": "NOTE(@[_a-zA-Z0-9]+)?:[\\s\\S]*",
 							"color": "#00bbbb"
 						},
 						{
 							"name": "bug",
-							"pattern": "BUG(@[_a-zA-Z0-9]+)?:.*",
+							"pattern": "BUG(@[_a-zA-Z0-9]+)?:[\\s\\S]*",
 							"color": "#ff8800"
+						},
+						{
+							"name": "example",
+							"pattern": "###[\\s\\S]*",
+							"color": "#559933",
+							"isMarkdown": true
 						}
 					],
 					"items": {
@@ -57,6 +63,10 @@
 							"pattern": {
 								"type": "string",
 								"description": "Regular expression that matches this annotation"
+							},
+							"isMarkdown": {
+								"type": "boolean",
+								"description": "Whether this annotation consists of markdown text"
 							}
 						}
 					}
