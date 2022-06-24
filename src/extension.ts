@@ -35,6 +35,7 @@ interface AnnotationRenderOptions extends DecorationRenderOptions {
 interface Language {
 	languageIds: string[];
 	prefixes: string[];
+	allowEmptyLines: boolean;
 	combinedAnnotationRegex: RegExp;
 }
 
@@ -275,7 +276,13 @@ function findAnnotations(document: TextDocument, info: Language) {
 			}
 
 			if (prefixText === null || prefixStartIdx === null || prefixStopIdx === null) {
-				continue;
+				if (info.allowEmptyLines) {
+					prefixStartIdx = 0;
+					prefixStopIdx = startPosition.character;
+					prefixText = " ".repeat(prefixStopIdx);
+				} else {
+					continue;
+				}
 			}
 
 			const lineOffset: number = document.offsetAt(line.range.start);

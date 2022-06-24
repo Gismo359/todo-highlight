@@ -2,7 +2,7 @@
 	"name": "todo",
 	"displayName": "TODO",
 	"description": "Hightlight TODOs in comments",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"engines": {
 		"vscode": "^1.61.0"
 	},
@@ -94,20 +94,26 @@
 							]
 						},
 						{
+							"allowEmptyLines": true,
 							"languageIds": [
 								"python",
 								"cython",
 								"cmake"
 							],
 							"prefixes": [
-								"#",
-								"  "
+								"#"
 							]
 						}
 					],
 					"items": {
 						"type": "object",
 						"properties": {
+							"allowEmptyLines": {
+								"items": {
+									"type": "boolean",
+									"description": "Allows annotations with whitespace prefixes"
+								}
+							},
 							"languageIds": {
 								"items": {
 									"type": "string",
