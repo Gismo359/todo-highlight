@@ -2,7 +2,7 @@
 	"name": "todo",
 	"displayName": "TODO",
 	"description": "Hightlight TODOs in comments",
-	"version": "0.0.5",
+	"version": "0.1.0",
 	"engines": {
 		"vscode": "^1.61.0"
 	},
@@ -13,7 +13,7 @@
 		"onStartupFinished"
 	],
 	"publisher": "DanielAtanasov",
-    "icon": "images/kochan.png",
+	"icon": "images/kochan.png",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/Daniel-Atanasov/todo-highlight.git"
@@ -30,23 +30,20 @@
 					"default": [
 						{
 							"name": "todo",
-							"pattern": "TODO(@[_a-zA-Z0-9]+)?:[\\s\\S]*",
-							"color": "#ffcc00"
+							"pattern": "TODO(@[_a-zA-Z0-9]+)?:",
+							"color": "#ffcc00",
+							"isMarkdown": true
 						},
 						{
 							"name": "note",
-							"pattern": "NOTE(@[_a-zA-Z0-9]+)?:[\\s\\S]*",
-							"color": "#00bbbb"
+							"pattern": "NOTE(@[_a-zA-Z0-9]+)?:",
+							"color": "#00bbbb",
+							"isMarkdown": true
 						},
 						{
 							"name": "bug",
-							"pattern": "BUG(@[_a-zA-Z0-9]+)?:[\\s\\S]*",
-							"color": "#ff8800"
-						},
-						{
-							"name": "example",
-							"pattern": "###[\\s\\S]*",
-							"color": "#559933",
+							"pattern": "BUG(@[_a-zA-Z0-9]+)?:",
+							"color": "#ff8800",
 							"isMarkdown": true
 						}
 					],
@@ -68,6 +65,10 @@
 							"isMarkdown": {
 								"type": "boolean",
 								"description": "Whether this annotation consists of markdown text"
+							},
+							"breakAfterInline": {
+								"type": "boolean",
+								"description": "Whether to stop if there is more text after the annotation on the same line"
 							}
 						}
 					}
@@ -77,41 +78,30 @@
 					"description": "Descriptions of languages and their comment types",
 					"default": [
 						{
-							"languageIds": ["javascript", "typescript", "c", "cpp", "objective-c", "objective-cpp", "csharp", "java"],
-							"lineComments": [
-								"(?<=\\\/\\\/).*"
+							"languageIds": [
+								"javascript",
+								"typescript",
+								"c",
+								"cpp",
+								"objective-c",
+								"objective-cpp",
+								"csharp",
+								"java"
 							],
-							"blockComments": [
-								"(?<=\\\/\\*)[\\s\\S]*?(?=\\*\\\/)"
-							],
-							"skippedBlocks": [
-								"\"(?:[^\"\\\\]|\\\\.)*\"",
-								"'(?:[^'\\\\]|\\\\.)*'"
+							"prefixes": [
+								"//",
+								"*"
 							]
 						},
 						{
-							"languageIds": ["python", "cython"],
-							"lineComments": [
-								"(?<=#).*"
+							"languageIds": [
+								"python",
+								"cython",
+								"cmake"
 							],
-							"blockComments": [
-								"(?<=\"\"\")(?:[^\"\\\\]|\\\\.)*(?=\"\"\")",
-								"(?<=''')(?:[^'\\\\]|\\\\.)*(?=''')"
-							],
-							"skippedBlocks": [
-								"\"(?:[^\"\\\\]|\\\\.)*\"",
-								"'(?:[^'\\\\]|\\\\.)*'"
-							]
-						},
-						{
-							"languageIds": ["cmake"],
-							"lineComments": [
-								"(?<=#).*"
-							],
-							"blockComments": [],
-							"skippedBlocks": [
-								"\"(?:[^\"\\\\]|\\\\.)*\"",
-								"'(?:[^'\\\\]|\\\\.)*'"
+							"prefixes": [
+								"#",
+								"  "
 							]
 						}
 					],
@@ -124,28 +114,10 @@
 									"description": "Language ids which should be annotated with these types of comments"
 								}
 							},
-							"lineComments": {
-								"type": "array",
-								"description": "Regular expressions that match line comments",
+							"prefixes": {
 								"items": {
 									"type": "string",
-									"description": "A regular expression"
-								}
-							},
-							"blockComments": {
-								"type": "array",
-								"description": "Regular expressions that match block comments",
-								"items": {
-									"type": "string",
-									"description": "A regular expression"
-								}
-							},
-							"skippedBlocks": {
-								"type": "array",
-								"description": "Regualr expressions that should be skipped (e.g. string literals)",
-								"items": {
-									"type": "string",
-									"description": "A regular expression"
+									"description": "Prefixes to look for before decorating an annotation"
 								}
 							}
 						}

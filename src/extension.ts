@@ -7,26 +7,35 @@ import {
 	TextEditorDecorationType,
 	DecorationRenderOptions,
 	TextDocument,
-	MarkdownString
+	TextLine,
+	MarkdownString,
+	Position
 } from 'vscode';
 
 interface Dictionary<T> {
 	[Key: string]: T;
 }
 
+const KNOWN_MACROS: Dictionary<RegExp> = {
+	"{email}": /[\w.]+@[\w]+\.[\w]+/,
+	"{name}": /[\w]+/,
+	"{date}": /{day}[-/.]{month}[-/.]{year}/,
+	"{day}": /\d{2}/,
+	"{month}": /\d{2}/,
+	"{year}": /\d{4}/
+};
+
 interface AnnotationRenderOptions extends DecorationRenderOptions {
 	name: string;
 	pattern: string;
 	isMarkdown?: boolean;
+	breakAfterInline?: boolean;
 }
 
 interface Language {
-	languageIds: Array<string>;
-	lineComments: Array<string>;
-	blockComments: Array<string>;
-	skippedBlocks: Array<string>;
-	combinedCommentRegex?: RegExp;
-	combinedAnnotationRegex?: RegExp;
+	languageIds: string[];
+	prefixes: string[];
+	combinedAnnotationRegex: RegExp;
 }
 
 class DecorationType {
@@ -34,19 +43,34 @@ class DecorationType {
 		public name: string,
 		public pattern: string,
 		public type: TextEditorDecorationType,
-		public isMarkdown?: boolean
+		public isMarkdown?: boolean,
+		public breakAfterInline?: boolean
 	) {
 		this.options = [];
 	}
 
-	options: Array<DecorationOptions> = [];
+	options: DecorationOptions[] = [];
 }
+
+class AnnotationMatch {
+	constructor(
+		public text: string,
+		public lineIdx: number,
+		public startIdx: number,
+		public stopIdx: number,
+		public prefixText: string,
+		public prefixStartIdx: number,
+		public prefixStopIdx: number,
+		public decorationType: DecorationType
+	) {
+	}
+};
 
 class GlobalState {
 	private static instance: GlobalState;
 
 	private constructor(
-		public languages: Array<Language>,
+		public languages: Language[],
 		public annotations: Dictionary<DecorationType>
 	) { }
 
@@ -61,25 +85,14 @@ class GlobalState {
 		return new RegExp(pattern, "g");
 	}
 
-	private static getCommentRegex(info: Language): RegExp {
-		const lineComments = info.lineComments.join("|");
-		const blockComments = info.blockComments.join("|");
-		const skippedBlocks = info.skippedBlocks.join("|");
-		const pattern = [
-			`(?<body>${lineComments}|${blockComments})`,
-			`(?:${skippedBlocks})`
-		].join("|");
-		return new RegExp(pattern, "g");
-	}
-
 	public static getInstance(): GlobalState {
 		return GlobalState.instance;
 	}
 
 	public static reload() {
 		const configuration = vscode.workspace.getConfiguration("todo");
-		const annotationOptions = configuration.get<Array<AnnotationRenderOptions>>("annotations");
-		const languages = configuration.get<Array<Language>>("languages");
+		const annotationOptions = configuration.get<AnnotationRenderOptions[]>("annotations");
+		const languages = configuration.get<Language[]>("languages");
 
 		if (annotationOptions === undefined || languages === undefined) {
 			return;
@@ -98,14 +111,14 @@ class GlobalState {
 				options.name,
 				options.pattern,
 				decorationType,
-				options.isMarkdown
+				options.isMarkdown,
+				options.breakAfterInline
 			);
 		}
 
 		GlobalState.instance = new GlobalState(languages, annotations);
 
 		for (const language of languages) {
-			language.combinedCommentRegex = GlobalState.getCommentRegex(language);
 			language.combinedAnnotationRegex = GlobalState.getAnnotationRegex(language);
 		}
 
@@ -113,7 +126,94 @@ class GlobalState {
 	}
 }
 
-function findAnnotations(document: TextDocument, info: Language, text: string, offset: number) {
+function handleAnnotation(
+	document: TextDocument,
+	info: Language,
+	matches: AnnotationMatch[]
+): number {
+	const decorationOptions: DecorationOptions[] = [];
+	const markdownLines: string[] = [];
+	const match: AnnotationMatch = matches.pop()!;
+
+	let markdownOffset: number | null = null;
+	let nextMatch: AnnotationMatch | undefined = matches.at(-1);
+	let lineIdx: number;
+	for (lineIdx = match.lineIdx; lineIdx < document.lineCount; lineIdx++) {
+		const line: TextLine = document.lineAt(lineIdx);
+		const lineText: string = line.text;
+		if (lineText.substring(match.prefixStartIdx, match.prefixStopIdx) !== match.prefixText) {
+			break;
+		}
+
+		const matchIdx: number = lineText.substring(match.prefixStopIdx).search(/\S/);
+		const contentIdx: number = match.prefixStopIdx + matchIdx;
+		if (matchIdx === -1) {
+			markdownLines.push("");
+			continue;
+		}
+
+		let shouldBreak: boolean;
+		if (lineIdx === match.lineIdx) {
+			shouldBreak = contentIdx < match.startIdx;
+		} else {
+			shouldBreak = contentIdx <= match.startIdx;
+		}
+
+		if (shouldBreak) {
+			break;
+		}
+
+		if (lineIdx === match.lineIdx + 1) {
+			if (match.decorationType.breakAfterInline && markdownLines.length) {
+				break;
+			}
+			markdownOffset = contentIdx - match.startIdx;
+		}
+
+		if (nextMatch !== undefined && lineIdx === nextMatch.lineIdx) {
+			lineIdx += handleAnnotation(document, info, matches);
+
+			nextMatch = matches.at(-1);
+			markdownLines.push("");
+			continue;
+		}
+
+		if (lineIdx === match.lineIdx) {
+			const firstLineText = lineText.substring(match.stopIdx);
+			if (firstLineText.trim()) {
+				markdownLines.push(firstLineText);
+			}
+		} else {
+			markdownLines.push(lineText.substring(match.startIdx + markdownOffset!));
+		}
+
+		const decoration: DecorationOptions = {
+			range: line.range.with(new Position(lineIdx, contentIdx))
+		};
+
+		decorationOptions.push(decoration);
+	}
+
+	let markdownString: MarkdownString;
+	if (match.decorationType.isMarkdown) {
+		markdownString = new MarkdownString(markdownLines.join("\n"));
+	}
+	for (const decorationOption of decorationOptions) {
+		if (match.decorationType.isMarkdown) {
+			decorationOption.hoverMessage = markdownString!;
+			decorationOption.hoverMessage.isTrusted = true;
+			decorationOption.hoverMessage.supportThemeIcons = true;
+			decorationOption.hoverMessage.supportHtml = true;
+		}
+
+		match.decorationType.options.push(decorationOption);
+	}
+
+	return lineIdx - match.lineIdx - 1;
+}
+
+function findAnnotations(document: TextDocument, info: Language) {
+	const text = document.getText();
 	const globalState = GlobalState.getInstance();
 	const annotations = globalState.annotations;
 
@@ -122,6 +222,7 @@ function findAnnotations(document: TextDocument, info: Language, text: string, o
 		return;
 	}
 
+	const matches: AnnotationMatch[] = [];
 	let match;
 	while ((match = regex.exec(text)) !== null) {
 		const groups = match.groups;
@@ -142,51 +243,60 @@ function findAnnotations(document: TextDocument, info: Language, text: string, o
 				continue;
 			}
 
-			const start = offset + match.index;
-			const stop = offset + match.index + match[0].length;
-
-			const decoration: DecorationOptions = {
-				range: new Range(
-					document.positionAt(start),
-					document.positionAt(stop)
-				)
-			};
-
-			if (annotation.isMarkdown) {
-				decoration.hoverMessage = new MarkdownString(value);
-				decoration.hoverMessage.isTrusted = true;
-				decoration.hoverMessage.supportThemeIcons = true;
-				decoration.hoverMessage.supportHtml = true;
+			const annotationStart = match.index;
+			const annotationStop = match.index + match[0].length;
+			const startPosition = document.positionAt(annotationStart);
+			const stopPosition = document.positionAt(annotationStop);
+			if (startPosition.line !== stopPosition.line) {
+				continue;
 			}
 
-			annotation.options.push(decoration);
+			const line: TextLine = document.lineAt(startPosition.line);
+			const textBefore: string = document.getText(new Range(line.range.start, startPosition));
+
+			let prefixText: string | null = null;
+			let prefixStartIdx: number | null = null;
+			let prefixStopIdx: number | null = null;
+			for (const prefix of info.prefixes) {
+				const index = textBefore.lastIndexOf(prefix);
+				if (index === -1) {
+					continue;
+				}
+
+				if (textBefore.substring(index + prefix.length).trim()) {
+					continue;
+				}
+
+				prefixText = prefix;
+				prefixStartIdx = index;
+				prefixStopIdx = index + prefix.length;
+
+				break;
+			}
+
+			if (prefixText === null || prefixStartIdx === null || prefixStopIdx === null) {
+				continue;
+			}
+
+			const lineOffset: number = document.offsetAt(line.range.start);
+			matches.push(
+				new AnnotationMatch(
+					value,
+					line.lineNumber,
+					annotationStart - lineOffset,
+					annotationStop - lineOffset,
+					prefixText,
+					prefixStartIdx,
+					prefixStopIdx,
+					annotation
+				)
+			);
 		}
 	}
-}
 
-function findComments(document: TextDocument, info: Language) {
-	const text = document.getText();
-
-	const regex = info.combinedCommentRegex;
-	if (regex === undefined) {
-		return;
-	}
-
-	let match;
-	while ((match = regex.exec(text)) !== null) {
-		const body = match.groups?.body;
-		if (body === undefined) {
-			continue;
-		}
-
-		// NOTE@Daniel:
-		//   Empty matches do not increment lastIndex for some dumb reason
-		if (body === '') {
-			regex.lastIndex++;
-			continue;
-		}
-
-		findAnnotations(document, info, body, match.index);
+	const reverseMatches = matches.reverse();
+	while (reverseMatches.length) {
+		handleAnnotation(document, info, reverseMatches);
 	}
 }
 
@@ -203,7 +313,7 @@ function decorate(editor: TextEditor) {
 			continue;
 		}
 
-		findComments(document, info);
+		findAnnotations(document, info);
 	}
 
 	for (const result of Object.values(globalState.annotations)) {
