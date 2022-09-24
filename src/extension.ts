@@ -59,7 +59,7 @@ class AnnotationMatch {
 		public lineIdx: number,
 		public startIdx: number,
 		public stopIdx: number,
-		public prefixText: string,
+		public prefixText: string | null,
 		public prefixStartIdx: number,
 		public prefixStopIdx: number,
 		public decorationType: DecorationType
@@ -127,11 +127,7 @@ class GlobalState {
 	}
 }
 
-function handleAnnotation(
-	document: TextDocument,
-	info: Language,
-	matches: AnnotationMatch[]
-): number {
+function handleAnnotation(document: TextDocument, matches: AnnotationMatch[]): number {
 	const decorationOptions: DecorationOptions[] = [];
 	const markdownLines: string[] = [];
 	const match: AnnotationMatch = matches.pop()!;
@@ -142,7 +138,14 @@ function handleAnnotation(
 	for (lineIdx = match.lineIdx; lineIdx < document.lineCount; lineIdx++) {
 		const line: TextLine = document.lineAt(lineIdx);
 		const lineText: string = line.text;
-		if (lineText.substring(match.prefixStartIdx, match.prefixStopIdx) !== match.prefixText) {
+		if (match.prefixText !== null) {
+			if (lineText.substring(match.prefixStartIdx, match.prefixStopIdx) !== match.prefixText) {
+				break;
+			}
+		} else if (!lineText.trim()) {
+			markdownLines.push("");
+			continue;
+		} else if (lineText.substring(0, match.startIdx).trim()) {
 			break;
 		}
 
@@ -172,7 +175,7 @@ function handleAnnotation(
 		}
 
 		if (nextMatch !== undefined && lineIdx === nextMatch.lineIdx) {
-			lineIdx += handleAnnotation(document, info, matches);
+			lineIdx += handleAnnotation(document, matches);
 
 			nextMatch = matches.at(-1);
 			markdownLines.push("");
@@ -279,7 +282,7 @@ function findAnnotations(document: TextDocument, info: Language) {
 				if (info.allowEmptyLines) {
 					prefixStartIdx = 0;
 					prefixStopIdx = startPosition.character;
-					prefixText = " ".repeat(prefixStopIdx);
+					prefixText = null;
 				} else {
 					continue;
 				}
@@ -303,7 +306,7 @@ function findAnnotations(document: TextDocument, info: Language) {
 
 	const reverseMatches = matches.reverse();
 	while (reverseMatches.length) {
-		handleAnnotation(document, info, reverseMatches);
+		handleAnnotation(document, reverseMatches);
 	}
 }
 
