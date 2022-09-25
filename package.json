@@ -78,7 +78,7 @@
 					"description": "Descriptions of languages and their comment types",
 					"default": [
 						{
-							"allowEmptyLines": false,
+							"allowEmptyLines": true,
 							"annotations": [],
 							"languageIds": [
 								"javascript",

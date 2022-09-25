@@ -133,7 +133,7 @@ class GlobalState {
 	}
 }
 
-function handleAnnotation(document: TextDocument, matches: AnnotationMatch[]): number {
+function handleAnnotation(document: TextDocument, info: Language, matches: AnnotationMatch[]): number {
 	const decorationOptions: DecorationOptions[] = [];
 	const markdownLines: string[] = [];
 	const match: AnnotationMatch = matches.pop()!;
@@ -141,12 +141,20 @@ function handleAnnotation(document: TextDocument, matches: AnnotationMatch[]): n
 	let markdownOffset: number | null = null;
 	let nextMatch: AnnotationMatch | undefined = matches.at(-1);
 	let lineIdx: number;
+	let prefixText: string | null = match.prefixText;
 	for (lineIdx = match.lineIdx; lineIdx < document.lineCount; lineIdx++) {
 		const line: TextLine = document.lineAt(lineIdx);
 		const lineText: string = line.text;
-		if (match.prefixText !== null) {
-			if (lineText.substring(match.prefixStartIdx, match.prefixStopIdx) !== match.prefixText) {
-				break;
+		if (prefixText !== null) {
+			if (lineText.length < match.prefixStopIdx ||
+				lineText.substring(match.prefixStartIdx, match.prefixStopIdx) !== prefixText) {
+				if (lineIdx === match.lineIdx + 1 && info.allowEmptyLines) {
+					prefixText = null;
+					lineIdx--;
+					continue;
+				} else {
+					break;
+				}
 			}
 		} else if (!lineText.trim()) {
 			markdownLines.push("");
@@ -181,7 +189,7 @@ function handleAnnotation(document: TextDocument, matches: AnnotationMatch[]): n
 		}
 
 		if (nextMatch !== undefined && lineIdx === nextMatch.lineIdx) {
-			lineIdx += handleAnnotation(document, matches);
+			lineIdx += handleAnnotation(document, info, matches);
 
 			nextMatch = matches.at(-1);
 			markdownLines.push("");
@@ -264,7 +272,7 @@ function findAnnotations(document: TextDocument, info: Language) {
 			const textBefore: string = document.getText(new Range(line.range.start, startPosition));
 
 			let prefixText: string | null = null;
-			let prefixStartIdx: number | null = null;
+			let prefixStartIdx: number  | null = null;
 			let prefixStopIdx: number | null = null;
 			for (const prefix of info.prefixes) {
 				const index = textBefore.lastIndexOf(prefix);
@@ -311,7 +319,7 @@ function findAnnotations(document: TextDocument, info: Language) {
 
 	const reverseMatches = matches.reverse();
 	while (reverseMatches.length) {
-		handleAnnotation(document, reverseMatches);
+		handleAnnotation(document, info, reverseMatches);
 	}
 }
 
