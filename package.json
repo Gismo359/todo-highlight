@@ -26,7 +26,7 @@
 			"properties": {
 				"todo.annotations": {
 					"type": "array",
-					"description": "All annotation that should be matched within comments",
+					"description": "All annotation that should be matched within comments in all languages",
 					"default": [
 						{
 							"name": "todo",
@@ -78,6 +78,8 @@
 					"description": "Descriptions of languages and their comment types",
 					"default": [
 						{
+							"allowEmptyLines": false,
+							"annotations": [],
 							"languageIds": [
 								"javascript",
 								"typescript",
@@ -95,6 +97,7 @@
 						},
 						{
 							"allowEmptyLines": true,
+							"annotations": [],
 							"languageIds": [
 								"python",
 								"cython",
@@ -124,6 +127,35 @@
 								"items": {
 									"type": "string",
 									"description": "Prefixes to look for before decorating an annotation"
+								}
+							},
+							"annotations": {
+								"type": "array",
+								"description": "All annotation that should be matched within comments in these languages",
+								"items": {
+									"type": "object",
+									"properties": {
+										"name": {
+											"type": "string",
+											"description": "Name of this annotation type"
+										},
+										"color": {
+											"type": "string",
+											"description": "Foreground color of this annotation"
+										},
+										"pattern": {
+											"type": "string",
+											"description": "Regular expression that matches this annotation"
+										},
+										"isMarkdown": {
+											"type": "boolean",
+											"description": "Whether this annotation consists of markdown text"
+										},
+										"breakAfterInline": {
+											"type": "boolean",
+											"description": "Whether to stop if there is more text after the annotation on the same line"
+										}
+									}
 								}
 							}
 						}

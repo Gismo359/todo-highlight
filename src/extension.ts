@@ -33,9 +33,11 @@ interface AnnotationRenderOptions extends DecorationRenderOptions {
 }
 
 interface Language {
+	annotations: AnnotationRenderOptions[];
 	languageIds: string[];
 	prefixes: string[];
 	allowEmptyLines: boolean;
+	combinedAnnotations: Dictionary<DecorationType>;
 	combinedAnnotationRegex: RegExp;
 }
 
@@ -72,16 +74,28 @@ class GlobalState {
 
 	private constructor(
 		public languages: Language[],
-		public annotations: Dictionary<DecorationType>
+		private annotations: Dictionary<DecorationType>
 	) { }
 
-	private static getAnnotationRegex(info: Language): RegExp {
-		const globalState = GlobalState.getInstance();
-		const annotations = globalState.annotations;
+	private static getDecorationTypes(annotationOptions: AnnotationRenderOptions[]): Dictionary<DecorationType> {
+		let annotations: Dictionary<DecorationType> = {};
+		for (const options of annotationOptions) {
+			const decorationType = vscode.window.createTextEditorDecorationType(options);
+			annotations[options.name] = new DecorationType(
+				options.name,
+				options.pattern,
+				decorationType,
+				options.isMarkdown,
+				options.breakAfterInline
+			);
+		}
+		return annotations;
+	}
 
+	private static getAnnotationRegex(info: Language): RegExp {
 		// TODO@Daniel:
 		//   Add language-specific annotations
-		const patterns = Object.values(annotations).map(t => `(?<${t.name}>${t.pattern})`);
+		const patterns = Object.values(info.combinedAnnotations).map(t => `(?<${t.name}>${t.pattern})`);
 		const pattern = patterns.join("|");
 		return new RegExp(pattern, "g");
 	}
@@ -105,21 +119,13 @@ class GlobalState {
 			}
 		}
 
-		let annotations: Dictionary<DecorationType> = {};
-		for (const options of annotationOptions) {
-			const decorationType = vscode.window.createTextEditorDecorationType(options);
-			annotations[options.name] = new DecorationType(
-				options.name,
-				options.pattern,
-				decorationType,
-				options.isMarkdown,
-				options.breakAfterInline
-			);
-		}
+		const globalAnnotations = GlobalState.getDecorationTypes(annotationOptions);
 
-		GlobalState.instance = new GlobalState(languages, annotations);
+		GlobalState.instance = new GlobalState(languages, globalAnnotations);
 
 		for (const language of languages) {
+			const languageAnnotations = GlobalState.getDecorationTypes(language.annotations);
+			language.combinedAnnotations = Object.assign({}, globalAnnotations, languageAnnotations);
 			language.combinedAnnotationRegex = GlobalState.getAnnotationRegex(language);
 		}
 
@@ -218,8 +224,7 @@ function handleAnnotation(document: TextDocument, matches: AnnotationMatch[]): n
 
 function findAnnotations(document: TextDocument, info: Language) {
 	const text = document.getText();
-	const globalState = GlobalState.getInstance();
-	const annotations = globalState.annotations;
+	const annotations = info.combinedAnnotations;
 
 	const regex = info.combinedAnnotationRegex;
 	if (regex === undefined) {
@@ -314,20 +319,20 @@ function decorate(editor: TextEditor) {
 	const document = editor.document;
 	const globalState = GlobalState.getInstance();
 
-	for (const value of Object.values(globalState.annotations)) {
-		value.options = [];
-	}
-
 	for (const info of globalState.languages) {
 		if (!info.languageIds.includes(document.languageId)) {
 			continue;
 		}
 
-		findAnnotations(document, info);
-	}
+		for (const value of Object.values(info.combinedAnnotations)) {
+			value.options = [];
+		}
 
-	for (const result of Object.values(globalState.annotations)) {
-		editor.setDecorations(result.type, result.options);
+		findAnnotations(document, info);
+
+		for (const result of Object.values(info.combinedAnnotations)) {
+			editor.setDecorations(result.type, result.options);
+		}
 	}
 }
 
