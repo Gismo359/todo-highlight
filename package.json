@@ -89,6 +89,7 @@
 							"languageIds": [
 								"javascript",
 								"typescript",
+								"typescriptreact",
 								"c",
 								"cpp",
 								"objective-c",
