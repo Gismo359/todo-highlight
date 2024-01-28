@@ -29,6 +29,12 @@
 					"description": "All annotation that should be matched within comments in all languages",
 					"default": [
 						{
+							"name": "review",
+							"pattern": "REVIEW(@[_a-zA-Z0-9]+)?:",
+							"color": "#00ccff",
+							"isMarkdown": true
+						},
+						{
 							"name": "todo",
 							"pattern": "TODO(@[_a-zA-Z0-9]+)?:",
 							"color": "#ffcc00",
