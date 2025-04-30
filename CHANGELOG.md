@@ -1,9 +1,5 @@
 # Change Log
 
-All notable changes to the "todo-highlight" extension will be documented in this file.
+## [0.2.0]
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
-
-## [Unreleased]
-
-- Initial release
+- `todo-highlight` is now a web extension and should run in the browser version of VSCode

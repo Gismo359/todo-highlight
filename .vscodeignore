@@ -1,6 +1,6 @@
 .vscode
+.vscode-test-web
 node_modules
 src/
 tsconfig.json
-webpack.config.js
 esbuild.js
